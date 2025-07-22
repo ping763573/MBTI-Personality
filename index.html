@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBTI 16型人格互動探索</title>
+    <!-- 引入 Tailwind CSS 以進行快速樣式設計 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts 的字體 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 自定義樣式 */
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #e0e7ee; /* 柔和的淺藍灰色背景 */
+            line-height: 1.6;
+        }
+
+        /* 頁面標題的漸變效果 */
+        .gradient-text {
+            background-image: linear-gradient(45deg, #4F46E5, #8B5CF6); /* 藍紫漸變 */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* 卡片容器的 3D 透視效果 */
+        .card-container {
+            perspective: 1000px;
+        }
+
+        /* 卡片的基礎樣式和過渡效果 */
+        .card {
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            position: relative; /* For inner elements positioning */
+            overflow: hidden; /* Ensure rounded corners clip content */
+        }
+        
+        /* 滑鼠懸停時卡片的立體浮動效果 */
+        .card:hover {
+            transform: translateY(-15px) translateZ(25px) rotateX(2deg); /* 更明顯的 3D 效果 */
+            box-shadow: 0 25px 40px rgba(0, 0, 0, 0.2); /* 更深的陰影 */
+        }
+
+        /* 被選中卡片的樣式 */
+        .card.active {
+            transform: translateY(-8px) scale(1.06); /* 稍微放大 */
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.8); /* 更強的藍色光暈效果 */
+            border-color: #3B82F6; /* 藍色邊框 */
+        }
+        
+        /* 卡片背景圖片的過渡效果 */
+        .card-bg-image {
+            transition: transform 0.4s ease-in-out;
+        }
+        .card:hover .card-bg-image {
+            transform: scale(1.15); /* 懸停時圖片放大 */
+        }
+
+        /* 影片播放器的容器樣式 */
+        #video-display-container {
+            transition: opacity 0.5s ease-in-out;
+            position: relative; /* Needed for positioning fullscreen button */
+            min-height: 300px; /* Ensure video container has some height even if video not loaded */
+            display: flex; /* Use flex for centering video */
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 解答按鈕樣式 */
+        .answer-button {
+            transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .answer-button:hover {
+            transform: scale(1.08); /* 懸停時放大 */
+            background-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 卡片網格的收合/展開動畫效果 */
+        #card-grid-wrapper {
+            display: grid;
+            grid-template-rows: 1fr;
+            transition: grid-template-rows 0.6s ease-in-out; /* 更流暢的動畫 */
+        }
+
+        #card-grid-wrapper.collapsed {
+            grid-template-rows: 0fr;
+        }
+
+        #card-grid {
+            overflow: hidden;
+        }
+
+        /* 全螢幕按鈕樣式 */
+        #fullscreen-toggle-btn {
+            position: absolute;
+            bottom: 1rem; /* Adjust as needed */
+            right: 1rem; /* Adjust as needed */
+            background-color: rgba(0, 0, 0, 0.6); /* 更深的背景 */
+            color: white;
+            padding: 0.6rem 1.2rem; /* 稍微大一點 */
+            border-radius: 9999px; /* 全圓角 */
+            cursor: pointer;
+            z-index: 20; /* Above video controls */
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-weight: 500;
+        }
+
+        #fullscreen-toggle-btn:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+            transform: translateY(-2px);
+        }
+
+        /* Fullscreen mode styling for the container */
+        #video-display-container:-webkit-full-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black; /* Fullscreen background */
+        }
+        #video-display-container:-moz-full-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+        }
+        #video-display-container:-ms-fullscreen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+        }
+        #video-display-container:fullscreen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+        }
+
+        /* Ensure video fills fullscreen container */
+        #video-display-container:-webkit-full-screen #video-player {
+            width: 100%;
+            height: 100%;
+            max-width: 100%; /* Prevent video from exceeding container */
+            max-height: 100%;
+            object-fit: contain; /* Ensure video is fully visible */
+        }
+        #video-display-container:-moz-full-screen #video-player {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        #video-display-container:-ms-fullscreen #video-player {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        #video-display-container:fullscreen #video-player {
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* 影片解說文字的動畫效果 */
+        .text-content {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        /* 只有當卡片被點擊選中時，解說文字才顯示 */
+        .card.active .text-content {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto px-4 py-8 md:py-12">
+
+        <!-- 頁面標題 -->
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-4xl md:text-6xl font-extrabold gradient-text leading-tight">MBTI 16型人格互動探索</h1>
+            <p class="mt-4 text-lg md:text-xl text-gray-600">點擊卡片觀看影片，或點擊「顯示解答」了解人格特質</p>
+        </header>
+
+        <!-- 影片播放器區塊 -->
+        <section id="video-display-container" class="mb-8 bg-black rounded-3xl shadow-2xl overflow-hidden" style="display: none;">
+            <!-- 影片播放器 -->
+            <video id="video-player" class="w-full h-full object-cover" controls autoplay playsinline>
+                您的瀏覽器不支援影片播放。
+            </video>
+            <!-- 全螢幕切換按鈕 -->
+            <button id="fullscreen-toggle-btn" class="hidden">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4M4 20l5-5m11 1v4m0 0h-4m4 0l-5-5"></path>
+                </svg>
+                <span>全螢幕</span>
+            </button>
+        </section>
+
+        <!-- 收合/展開 控制區塊 -->
+        <div class="flex justify-center mb-6">
+            <button id="toggle-cards-btn" class="flex items-center justify-center w-full md:w-auto px-8 py-3 bg-white text-gray-700 font-semibold rounded-full shadow-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105">
+                <span id="toggle-btn-text">收合卡片</span>
+                <svg id="toggle-btn-icon" class="w-5 h-5 ml-2 transition-transform duration-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- 卡片網格容器 (用於收合/展開) -->
+        <div id="card-grid-wrapper">
+            <!-- 16個人格卡片網格 -->
+            <main id="card-grid" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-6 md:gap-10">
+                <!-- JavaScript 將會在此處動態生成卡片 -->
+            </main>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 使用者提供的最新人格類型資訊
+            const personalityTypes = [
+                { title: '建築師 (INTJ)', description: '富有想像力和策略性的思想家，對一切都有計劃。', colorClass: 'text-blue-300' },
+                { title: '邏輯學家 (INTP)', description: '創新的發明家，對知識有著永不滿足的渴望。', colorClass: 'text-blue-300' },
+                { title: '指揮官 (ENTJ)', description: '大膽、富有想像力和意志堅強的領導者，總能找到方法，或創造方法。', colorClass: 'text-blue-300' },
+                { title: '辯論家 (ENTP)', description: '聰明且好奇的思想家，無法抗拒智力挑戰。', colorClass: 'text-blue-300' },
+                { title: '倡導者 (INFJ)', description: '安靜而神秘，但非常鼓舞人心且不知疲倦的理想主義者。', colorClass: 'text-green-300' },
+                { title: '調解員 (INFP)', description: '詩意、善良和利他的人，總是渴望幫助一個好的事業。', colorClass: 'text-green-300' },
+                { title: '主角 (ENFJ)', description: '魅力非凡、鼓舞人心的領導者，能夠讓聽眾著迷。', colorClass: 'text-green-300' },
+                { title: '行動者 (ENFP)', description: '熱情、富有創造力、善於交際的自由精神，總能找到微笑的理由。', colorClass: 'text-green-300' },
+                { title: '後勤家 (ISTJ)', description: '務實、注重事實的人，其可靠性毋庸置疑。', colorClass: 'text-yellow-300' },
+                { title: '捍衛者 (ISFJ)', description: '非常敬業、溫暖的保護者，隨時準備保護他們所愛的人。', colorClass: 'text-yellow-300' },
+                { title: '執行長 (ESTJ)', description: '優秀的管理者，在管理事物或人員方面無與倫比。', colorClass: 'text-yellow-300' },
+                { title: '領事 (ESFJ)', description: '非常有愛心、善於交際且受歡迎的人，總是樂於助人。', colorClass: 'text-yellow-300' },
+                { title: '藝術大師 (ISTP)', description: '大膽務實的實驗者，精通各種工具。', colorClass: 'text-purple-300' },
+                { title: '冒險家 (ISFP)', description: '靈活而迷人的藝術家，隨時準備探索和體驗新事物。', colorClass: 'text-purple-300' },
+                { title: '企業家 (ESTP)', description: '聰明、精力充沛、洞察力敏銳，真正享受挑戰極限的生活。', colorClass: 'text-purple-300' },
+                { title: '娛樂家 (ESFP)', description: '隨性、精力充沛、充滿熱情的人－在他們身邊，生活永遠不會無聊。', colorClass: 'text-purple-300' }
+            ];
+
+            const cardGrid = document.getElementById('card-grid');
+            const videoPlayer = document.getElementById('video-player');
+            const videoContainer = document.getElementById('video-display-container');
+            const toggleBtn = document.getElementById('toggle-cards-btn');
+            const toggleBtnText = document.getElementById('toggle-btn-text');
+            const toggleBtnIcon = document.getElementById('toggle-btn-icon');
+            const cardGridWrapper = document.getElementById('card-grid-wrapper');
+            const fullscreenToggleBtn = document.getElementById('fullscreen-toggle-btn');
+            let currentActiveCard = null;
+
+            // 動態生成16張人格卡片
+            personalityTypes.forEach((type, index) => {
+                const videoNumber = String(index + 1).padStart(3, '0');
+                const imageUrl = `https://ping763573.github.io/MBTI-Personality/${videoNumber}.png`;
+                
+                const cardHTML = `
+                    <div class="card-container">
+                        <div id="card-${videoNumber}" 
+                             class="card w-full aspect-[3/4] p-4 flex flex-col justify-end rounded-2xl text-white border-2 border-transparent shadow-lg relative group" 
+                             data-video-number="${videoNumber}">
+                            
+                            <div class="absolute inset-0 bg-cover bg-center card-bg-image" 
+                                 style="background-image: url('${imageUrl}');"
+                                 onerror="this.style.backgroundColor='#4a5568'; this.style.backgroundImage='none';">
+                            </div>
+                            
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-transparent"></div>
+
+                            <div class="relative z-10 w-full">
+                                <div class="text-content text-center">
+                                    <div class="font-bold text-xl md:text-2xl mb-1 ${type.colorClass}">${type.title}</div>
+                                    <p class="text-sm md:text-base opacity-90 ${type.colorClass}">${type.description}</p>
+                                </div>
+                                
+                                <div class="button-container text-center mt-4">
+                                    <button class="answer-button bg-white/25 backdrop-blur-sm text-white font-semibold py-2 px-6 rounded-full hover:bg-white/40">
+                                        顯示解答
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                cardGrid.innerHTML += cardHTML;
+            });
+
+            // 卡片網格點擊事件處理
+            cardGrid.addEventListener('click', function (event) {
+                const buttonContainer = event.target.closest('.button-container');
+                const card = event.target.closest('.card');
+
+                if (!card) return;
+
+                // Toggle text content visibility and button display
+                const textContent = card.querySelector('.text-content');
+                const answerButton = card.querySelector('.answer-button');
+
+                if (buttonContainer && answerButton === event.target) { // Only trigger if the button itself is clicked
+                    event.stopPropagation(); // Prevent card click from firing
+                    if (textContent) {
+                        textContent.classList.remove('opacity-0', 'translate-y-[20px]'); // Ensure text is fully visible
+                        textContent.classList.add('opacity-100', 'translate-y-0');
+                    }
+                    if (answerButton) {
+                        answerButton.style.display = 'none'; // Hide the button after click
+                    }
+                    return;
+                }
+                
+                const videoNumber = card.dataset.videoNumber;
+                const videoUrl = `https://ping763573.github.io/MBTI-Personality/${videoNumber}.mp4`;
+
+                // If the same video is already playing and not paused, just scroll to it
+                if (videoPlayer.src.endsWith(videoUrl) && !videoPlayer.paused) {
+                    videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+
+                videoPlayer.src = videoUrl;
+                videoPlayer.load();
+                videoPlayer.play().catch(e => console.error("影片播放失敗:", e));
+
+                if (videoContainer.style.display === 'none') {
+                    videoContainer.style.opacity = '0';
+                    videoContainer.style.display = 'block';
+                    fullscreenToggleBtn.classList.remove('hidden'); 
+                    setTimeout(() => {
+                        videoContainer.style.opacity = '1';
+                        videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 10);
+                } else {
+                    videoContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
+                // Update active card styling
+                if (currentActiveCard) {
+                    currentActiveCard.classList.remove('active');
+                }
+                card.classList.add('active');
+                currentActiveCard = card;
+            });
+
+            // 收合/展開 按鈕點擊事件
+            toggleBtn.addEventListener('click', function() {
+                const isCollapsed = cardGridWrapper.classList.toggle('collapsed');
+                if (isCollapsed) {
+                    toggleBtnText.textContent = '展開卡片';
+                    toggleBtnIcon.style.transform = 'rotate(180deg)';
+                } else {
+                    toggleBtnText.textContent = '收合卡片';
+                    toggleBtnIcon.style.transform = 'rotate(0deg)';
+                }
+            });
+
+            // 影片加載錯誤處理
+            videoPlayer.addEventListener('error', function() {
+                console.error('影片加載失敗:', videoPlayer.src);
+                const errorMsg = document.createElement('div');
+                errorMsg.textContent = '抱歉，無法載入指定的影片。請檢查您的網路連線或影片來源是否正確。';
+                errorMsg.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); background-color: #f87171; color: white; padding: 1rem; border-radius: 0.5rem; z-index: 100;';
+                document.body.appendChild(errorMsg);
+                setTimeout(() => {
+                    document.body.removeChild(errorMsg);
+                }, 4000);
+            });
+
+            // 全螢幕切換按鈕點擊事件
+            fullscreenToggleBtn.addEventListener('click', function() {
+                if (!document.fullscreenElement &&    // standard
+                    !document.mozFullScreenElement && // Firefox
+                    !document.webkitFullscreenElement && // Chrome, Safari and Opera
+                    !document.msFullscreenElement) {  // IE/Edge
+                    // Enter fullscreen
+                    if (videoContainer.requestFullscreen) {
+                        videoContainer.requestFullscreen();
+                    } else if (videoContainer.mozRequestFullScreen) { /* Firefox */
+                        videoContainer.mozRequestFullScreen();
+                    } else if (videoContainer.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+                        videoContainer.webkitRequestFullscreen();
+                    } else if (videoContainer.msRequestFullscreen) { /* IE/Edge */
+                        videoContainer.msRequestFullscreen();
+                    }
+                } else {
+                    // Exit fullscreen
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.mozCancelFullScreen) { /* Firefox */
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) { /* IE/Edge */
+                        document.msExitFullscreen();
+                    }
+                }
+            });
+
+            // Update button text/icon based on fullscreen state
+            document.addEventListener('fullscreenchange', updateFullscreenButton);
+            document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+            document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+            document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+
+            function updateFullscreenButton() {
+                const isFullscreen = document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+                const fullscreenText = fullscreenToggleBtn.querySelector('span');
+                const fullscreenIconPath = fullscreenToggleBtn.querySelector('svg path');
+
+                if (isFullscreen) {
+                    fullscreenText.textContent = '退出全螢幕';
+                    // Icon for exit fullscreen (shrink)
+                    fullscreenIconPath.setAttribute('d', 'M9 9l-6 6m0 0v-4m0 4h4m6-6l6-6m0 0v4m0-4h-4m-6 6l-6 6m0 0v-4m0 4h4m6-6l6 6m0 0v-4m0 4h-4');
+                } else {
+                    fullscreenText.textContent = '全螢幕';
+                    // Icon for enter fullscreen (expand)
+                    fullscreenIconPath.setAttribute('d', 'M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4M4 20l5-5m11 1v4m0 0h-4m4 0l-5-5');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
